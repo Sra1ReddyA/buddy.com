@@ -1,0 +1,123 @@
+// Buddy — analytics + feedback schema
+// Local dev uses SQLite. For production switch provider to "postgresql"
+// (or "mysql") and point DATABASE_URL at your server — no model changes needed.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// One row per unique browser (identified by the `buddy_vid` cookie).
+/// COUNT(*) on this table = total unique visitors.
+model Visitor {
+  id         String   @id // UUID stored in the buddy_vid cookie
+  firstSeen  DateTime @default(now())
+  lastSeen   DateTime @updatedAt
+  visitCount Int      @default(1)
+  userAgent  String?
+  referrer   String?
+  country    String?
+
+  visits      Visit[]
+  events      ToolUsageEvent[]
+  reviews     Review[]
+  conversions Conversion[]
+  lawSearches LawBuddyUsage[]
+}
+
+/// One row per visit (a new browser session, 30-min inactivity window).
+/// COUNT(*) on this table = total visits.
+model Visit {
+  id        String   @id @default(cuid())
+  visitorId String
+  path      String
+  referrer  String?
+  createdAt DateTime @default(now())
+
+  visitor Visitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([visitorId])
+}
+
+/// Every meaningful interaction with a tool.
+/// tool:   "resume-buddy" | "law-buddy" | "gym-buddy" | "pdf-to-word" | "word-to-pdf"
+/// action: "open" | "coming_soon_click" | "upload" | "parse_upload" | "generate" | "convert" | "convert_failed"
+///         | "download_pdf" | "download_docx"
+model ToolUsageEvent {
+  id        String   @id @default(cuid())
+  tool      String
+  action    String
+  template  String? // "full-time" | "w2" | "c2c" (Resume Buddy only)
+  metadata  String? // JSON blob for extra context (kept as text for SQLite portability)
+  visitorId String?
+  createdAt DateTime @default(now())
+
+  visitor Visitor? @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+
+  @@index([tool, action])
+  @@index([createdAt])
+}
+
+/// One row per file conversion attempt (PDF → Word or Word → PDF).
+/// Conversions run in the visitor's browser; only these metrics are sent — never the file itself.
+model Conversion {
+  id          String   @id @default(cuid())
+  tool        String // "pdf-to-word" | "word-to-pdf"
+  status      String // "success" | "failed"
+  inputBytes  Int
+  outputBytes Int?
+  pages       Int?
+  durationMs  Int?
+  errorCode   String? // short machine code, e.g. "password", "not_pdf", "no_text"
+  visitorId   String?
+  createdAt   DateTime @default(now())
+
+  visitor Visitor? @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+
+  @@index([tool, status])
+  @@index([createdAt])
+}
+
+/// Law Buddy usage counter: one row per search (COUNT(*) = total Law Buddy searches).
+/// Privacy: the user's case description and the generated query are NOT stored — only these metrics.
+model LawBuddyUsage {
+  id          String   @id @default(cuid())
+  caseType    String // Civil | Criminal | Family | Corporate | Real Estate | Intellectual Property | Traffic | Administrative
+  jurisdiction String? // "Federal" or a U.S. state name (null for searches made before this field existed)
+  status      String // "success" (≥1 case) | "no_results" | "failed"
+  resultCount Int      @default(0)
+  engine      String? // "llm" | "rules"
+  errorCode   String? // "config" | "auth" | "rate_limit" | "timeout" | "upstream" | "internal"
+  durationMs  Int?
+  visitorId   String?
+  createdAt   DateTime @default(now())
+
+  visitor Visitor? @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+
+  @@index([caseType])
+  @@index([jurisdiction])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Star rating captured right after a successful download (Resume Buddy and the converters).
+model Review {
+  id        String   @id @default(cuid())
+  tool      String   @default("resume-buddy")
+  rating    Int // 1..5, validated in the API layer
+  comment   String?
+  template  String? // Resume Buddy only
+  format    String? // "pdf" | "docx"
+  visitorId String?
+  createdAt DateTime @default(now())
+
+  visitor Visitor? @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+
+  @@index([tool])
+  @@index([createdAt])
+}

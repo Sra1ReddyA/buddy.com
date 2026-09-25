@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --animate-pop: pop 180ms ease-out;
+  --animate-fade: fade 200ms ease-out;
+}
+
+@keyframes pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; }
+  body { @apply bg-slate-50 text-slate-900; }
+  :focus-visible { @apply outline-2 outline-offset-2 outline-brand-500; }
+}
+
+@layer components {
+  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 bg-brand-600 text-white shadow-sm hover:bg-brand-700; }
+  .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50; }
+  .btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 text-slate-600 hover:bg-slate-100; }
+  .card { @apply rounded-2xl border border-slate-200 bg-white shadow-sm; }
+  .label { @apply mb-1 block text-xs font-medium text-slate-600; }
+  .input { @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:outline-none; }
+}
+
+/* Arimo (Arial-metric, SIL OFL) — fallback for the resume preview when Arial isn't installed */
+@font-face { font-family: "Arimo"; src: url("/fonts/Arimo-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Arimo"; src: url("/fonts/Arimo-Italic.ttf") format("truetype"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Arimo"; src: url("/fonts/Arimo-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+
+.resume-paper {
+  font-family: Arial, Arimo, "Liberation Sans", Helvetica, sans-serif;
+  color: #000;
+  /* match PDF/Word: no kerning, ligatures or hyphenation */
+  font-kerning: none;
+  font-variant-ligatures: none;
+  hyphens: manual;
+  text-rendering: geometricPrecision;
+  box-sizing: border-box;
+}
+.resume-paper * { color: #000; }
+
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
