@@ -14,6 +14,7 @@
   "dependencies": {
     "@google/genai": "^2.24.0",
     "@prisma/client": "^6.19.3",
+    "clsx": "^2.1.1",
     "docx": "^9.7.2",
     "file-saver": "^2.0.5",
     "geist": "^1.7.2",
@@ -38,6 +39,5 @@
     "prisma": "^6.19.3",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3"
-    "springboot": "^4.1.1"
   }
 }
