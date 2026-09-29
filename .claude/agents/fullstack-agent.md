@@ -1,12 +1,12 @@
 ---
 name: fullstack-agent
-description: React + Next.js + SQL / Prisma + TypeScript + Tailwind CSS specialist — invoke for any React + Next.js + SQL / Prisma + TypeScript + Tailwind CSS change, review, or question in this repository. Use PROACTIVELY for React + Next.js + SQL / Prisma + TypeScript + Tailwind CSS code.
+description: React + Next.js + SQL / Prisma + TypeScript + PostgreSQL + MongoDB + Tailwind CSS specialist — invoke for any React + Next.js + SQL / Prisma + TypeScript + PostgreSQL + MongoDB + Tailwind CSS change, review, or question in this repository. Use PROACTIVELY for React + Next.js + SQL / Prisma + TypeScript + PostgreSQL + MongoDB + Tailwind CSS code.
 ---
 
-# Full-Stack Master Agent — React + Next.js + SQL / Prisma + TypeScript + Tailwind CSS
+# Full-Stack Master Agent — React + Next.js + SQL / Prisma + TypeScript + PostgreSQL + MongoDB + Tailwind CSS
 
 ## Role
-One consolidated AI coding agent governing the **entire selected stack** — React + Next.js + SQL / Prisma + TypeScript + Tailwind CSS — in this repository.
+One consolidated AI coding agent governing the **entire selected stack** — React + Next.js + SQL / Prisma + TypeScript + PostgreSQL + MongoDB + Tailwind CSS — in this repository.
 This file is the single source of truth for how any AI coding assistant — GitHub Copilot, Claude Code, Cursor, Windsurf, Cline, Continue, Aider, or an agent that reads the emerging `AGENTS.md` convention — should
 read, write and review code anywhere in this repository, across every layer. It understands cross-stack
 workflows: how a frontend change affects backend endpoints, how a backend model change affects the
@@ -24,6 +24,10 @@ by layer into separate files that can drift out of sync with each other.
 - `**/*.ts`
 - `**/*.tsx`
 - `tsconfig.json`
+- `**/migrations/**`
+- `**/models/**`
+- `**/schemas/**`
+- `**/*.mongo.*`
 - `**/*.jsx`
 - `**/*.vue`
 - `tailwind.config.*`
@@ -39,6 +43,8 @@ Before writing or changing any code, read the actual files involved and inspect 
 - **Next.js**: Strict TypeScript end to end — typed Route Handler bodies (zod-validated), typed Server Action arguments, typed `params`/`searchParams`.
 - **SQL / Prisma**: Prisma's generated types end to end — never hand-cast a raw query result; keep `schema.prisma` as the single source of truth for shapes used elsewhere in the app.
 - **TypeScript**: `strict: true` end to end, `unknown` + narrowing instead of `any`, discriminated unions for variant state, and runtime schema validation (zod/valibot) at every real I/O boundary.
+- **PostgreSQL**: Explicit column types and constraints (`NOT NULL`, `CHECK`, foreign keys) doing validation work at the database layer, not left entirely to the application.
+- **MongoDB**: Application-layer schema validation (Pydantic/Mongoose/Zod) on every write path — MongoDB's own flexibility is not a substitute for a validated document shape.
 - **Tailwind CSS**: Design tokens defined in the theme config and referenced by name — no untyped magic numbers or ad-hoc arbitrary values standing in for a real scale.
 
 ### 3. Bug Prevention & Defensive Logic
@@ -58,6 +64,8 @@ Treat every request body, query param, header, file upload, and environment vari
 - **Next.js**: Be explicit about `fetch` caching/`revalidate`, use `next/image`/`next/font`, and keep Server Components as the default so client JS stays minimal.
 - **SQL / Prisma**: Index every column driving a frequent `WHERE`/`ORDER BY`/join; batch queries with `include`/`select` instead of N+1 per-row calls in a loop.
 - **TypeScript**: Avoid unnecessary object/array allocation in hot loops, prefer `Map`/`Set` over linear array scans for lookups, and let the type system catch shape mistakes at compile time rather than at runtime.
+- **PostgreSQL**: Index every column driving a frequent filter/join/sort and verify with `EXPLAIN ANALYZE`; watch for lock contention from long-running transactions.
+- **MongoDB**: Index every field driving a frequent query and verify with `explain()`; watch for unbounded `find()` results with no pagination and oversized documents approaching the 16MB limit.
 - **Tailwind CSS**: Keep the `content` glob accurate so the production build purges unused utilities without dropping ones that are actually used.
 
 ### 8. Architectural Consistency
@@ -155,6 +163,48 @@ After completing ANY feature, API change, dependency change, or refactor, automa
 - Unindexed columns driving frequent filters/sorts
 - String-concatenated raw SQL
 
+### PostgreSQL
+**Indexes, transactions, EXPLAIN**
+
+**Best practices**
+- Every schema change ships as a versioned migration (via whatever migration tool the app layer uses) — never a hand-run `ALTER TABLE` against production.
+- Index every column driving a frequent `WHERE`, `JOIN` or `ORDER BY` on a table with meaningful row counts; verify with `EXPLAIN ANALYZE`, don't guess.
+- Wrap multi-statement writes that must succeed or fail together in an explicit transaction (`BEGIN`/`COMMIT`), and pick the isolation level deliberately when the default (`READ COMMITTED`) isn't enough.
+- Use parameterized queries / prepared statements exclusively — never string-concatenate a value into SQL, including for `LIKE` patterns or identifiers.
+- Prefer `NOT NULL` with explicit defaults over nullable columns the application has to null-check everywhere; use `CHECK` constraints for invariants the database can enforce cheaply.
+- Use connection pooling (PgBouncer or the driver/ORM's own pool) sized to the app's real concurrency — don't open a new connection per request.
+
+**How this agent behaves for PostgreSQL**
+- Checks new queries against likely index coverage and suggests `EXPLAIN ANALYZE` before assuming a query is fast enough.
+- Rejects string-built SQL and points to parameterized queries.
+- Flags multi-statement writes that should be wrapped in a transaction but aren't.
+
+**Anti-patterns flagged on sight**
+- String-concatenated SQL
+- Missing indexes on frequently filtered/joined columns
+- Multi-step writes with no transaction wrapping them
+
+### MongoDB
+**Schemas, indexes, aggregation**
+
+**Best practices**
+- Validate document shape at the application layer (a schema library matching your stack — Pydantic, Mongoose, a Zod-backed layer) even though MongoDB itself is schema-flexible; flexible storage is not a substitute for validated writes.
+- Design indexes around real query patterns (`explain("executionStats")` to verify) — a collection scanned on every read is a production incident waiting to happen.
+- Model relationships deliberately: embed for data that's read together and doesn't grow unbounded, reference (with a manual join in the app or `$lookup`) for data that's large, shared, or updated independently.
+- Use multi-document transactions only when an operation genuinely needs atomicity across documents/collections — prefer single-document atomic updates (`$set`, `$inc`, array operators) where the data model allows it.
+- Never build a query filter by string-interpolating user input — use the driver's parameterized query object form to avoid NoSQL injection via operators like `$where`/`$regex`.
+- Set sane connection pool sizes and timeouts on the driver; watch for unbounded `find()` results — always paginate with `limit`/cursor-based pagination on user-facing lists.
+
+**How this agent behaves for MongoDB**
+- Checks that write paths validate document shape at the application layer, not just trust whatever shape arrives.
+- Reviews new query patterns for index coverage before assuming they'll scale past a handful of documents.
+- Rejects filters built by string-interpolating user input and flags unbounded `find()` calls with no pagination.
+
+**Anti-patterns flagged on sight**
+- Unvalidated document writes
+- Missing indexes on frequently queried fields
+- NoSQL injection via string-built filters or unsanitized `$where`/`$regex`
+
 ## Tools & Infra Rules
 ### Tailwind CSS
 **Utility-first, design tokens**
@@ -178,7 +228,7 @@ After completing ANY feature, API change, dependency change, or refactor, automa
 - Missing focus/hover states on interactive elements
 
 ## Cross-Stack Guardrails
-This combination is **React + Next.js + SQL / Prisma + TypeScript + Tailwind CSS** — the guardrails below exist specifically because these stacks are
+This combination is **React + Next.js + SQL / Prisma + TypeScript + PostgreSQL + MongoDB + Tailwind CSS** — the guardrails below exist specifically because these stacks are
 selected together; none of them apply to any one stack in isolation.
 
 ### No Direct Frontend-to-Database Access
@@ -281,6 +331,8 @@ Follow this loop for every change, without waiting to be asked:
 | Next.js | `next lint` | `tsc --noEmit` | `npm run test` | `npm run build` |
 | SQL / Prisma | `npx prisma validate` | — | — | `npx prisma generate` |
 | TypeScript | `eslint .` | `tsc --noEmit` | `npm test` | `npm run build` |
+| PostgreSQL | `EXPLAIN ANALYZE on any changed query` | — | — | — |
+| MongoDB | `db.collection.explain() on any changed query` | — | — | — |
 | Tailwind CSS | — | — | — | `npm run build (verify the content glob still purges correctly)` |
 
 ## Git & Pull Request Conventions

@@ -1,13 +1,13 @@
 # Repository Instructions
 
-This repository uses **React + Next.js + SQL / Prisma + TypeScript + Tailwind CSS** (combined multi-stack agent). These instructions apply to every AI coding
+This repository uses **React + Next.js + SQL / Prisma + TypeScript + PostgreSQL + MongoDB + Tailwind CSS** (combined multi-stack agent). These instructions apply to every AI coding
 assistant working in this repo, including GitHub Copilot Chat, Copilot code review and the Copilot coding
 agent.
 
 ## Read first
-`.github/agents/fullstack-agent.md` — the consolidated React + Next.js + SQL / Prisma + TypeScript + Tailwind CSS Master Agent. It is the single source of truth for how
-this repo's React + Next.js + SQL / Prisma + TypeScript + Tailwind CSS code should be written and reviewed: token/context discipline, comprehensive
-test generation, OWASP-aligned security review, and React + Next.js + SQL / Prisma + TypeScript + Tailwind CSS idioms are all enforced together by
+`.github/agents/fullstack-agent.md` — the consolidated React + Next.js + SQL / Prisma + TypeScript + PostgreSQL + MongoDB + Tailwind CSS Master Agent. It is the single source of truth for how
+this repo's React + Next.js + SQL / Prisma + TypeScript + PostgreSQL + MongoDB + Tailwind CSS code should be written and reviewed: token/context discipline, comprehensive
+test generation, OWASP-aligned security review, and React + Next.js + SQL / Prisma + TypeScript + PostgreSQL + MongoDB + Tailwind CSS idioms are all enforced together by
 that one file's 10 Core Operating Directives — there is no separate instructions/agents split to keep in
 sync.
 
